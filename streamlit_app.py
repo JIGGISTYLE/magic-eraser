@@ -72,11 +72,6 @@ with st.sidebar:
             format_func=lambda name: MODEL_LABELS.get(name, name),
             help="Scenes models suit landscapes and everyday photos. Portrait models suit faces. Select multiple models to compare results.",
         )
-        max_size = st.select_slider(
-            "Output size", [256, 384, 512, 640, 768], value=512,
-            format_func=lambda size: f"{size} px",
-            help="Length of the longest edge. Larger sizes take more time.",
-        )
         with st.expander("Model details"):
             st.caption(f"Processing device: {inpainter.device}")
             for name in available:
@@ -158,6 +153,20 @@ if image is None:
 for key, default in (("canvas_token", 0), ("inpaint_key", None), ("results", None)):
     st.session_state.setdefault(key, default)
 
+photo_info, inference_control = st.columns([1, 1.6], gap="medium")
+with photo_info:
+    st.caption(f"{image_stem if sample == 'None' or upload else sample.split(' (')[0]} · {image.width} × {image.height} px")
+with inference_control:
+    max_size = st.select_slider(
+        "Inference size", [256, 384, 512, 640, 768], value=512,
+        format_func=lambda size: {
+            256: "256 px · Fastest", 384: "384 px · Faster", 512: "512 px · Balanced",
+            640: "640 px · Slower", 768: "768 px · Most detail",
+        }[size],
+        help="Sets the longest image edge processed by the model. Smaller sizes are faster; larger sizes take longer and may retain more detail. A larger size does not guarantee a better repair.",
+    )
+    st.caption("Smaller: faster preview. Larger: slower processing, more detail potential.")
+
 # Measure the editor, not the whole window, so the canvas also fits beside the sidebar.
 measure_editor = st.components.v2.component(
     "editor_width", html='<div style="height:0;width:100%"></div>',
@@ -185,7 +194,6 @@ canvas_w, canvas_h = canvas_geometry(image, max(1, (width_state.pixels or 640) -
 drawing_mode = "freedraw" if tool == "Brush" else "rect"
 fill_color = "rgba(255,255,255,1)" if tool == "Rectangle" else stroke_color
 
-st.caption(f"{image_stem if sample == 'None' or upload else sample.split(' (')[0]} · {image.width} × {image.height} px")
 with st.container(key="editor-toolbar"):
     instruction, clear, restore = st.columns([3, 1, 1.3], gap="small")
     instruction.markdown("**Paint the area to remove**")
