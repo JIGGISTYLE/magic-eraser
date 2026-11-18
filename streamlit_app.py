@@ -22,13 +22,13 @@ SAMPLES = {
 
 st.set_page_config(
     page_title="EraseAI",
-    page_icon=Image.open(ROOT / "assets/favicon.png"),
+    page_icon=Image.open(ROOT / "assets/eraseai-favicon.png"),
     layout="wide",
 )
 
 
 st.html(f"<style>{(ROOT / 'editor.css').read_text()}</style>")
-LOGO_SRC = "data:image/png;base64," + base64.b64encode((ROOT / "assets/logo-mark.png").read_bytes()).decode()
+LOGO_SRC = "data:image/png;base64," + base64.b64encode((ROOT / "assets/eraseai-mark.png").read_bytes()).decode()
 
 
 @st.cache_resource(show_spinner="Loading inpainting models…")
