@@ -1,6 +1,8 @@
-# 🪄 Magic Eraser — Deep Learning Image Inpainting & Restoration
+# EraseAI — Image Inpainting & Object Removal
 
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
+![EraseAI official logo](assets/eraseai-original.png)
+
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.66-FF4B4B.svg)](https://streamlit.io/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.142%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.9%2B-EE4C2C.svg)](https://pytorch.org/)
@@ -49,7 +51,7 @@ networks (trained on **Places2** and **CelebA-HQ**), and reconstruct the image i
 ## 📁 Repository Structure
 
 ```
-magic-eraser/
+eraser-ai/
 ├── streamlit_app.py         # Streamlit web UI (upload, paint mask, inpaint, download)
 ├── app.py                   # FastAPI server & REST endpoints
 ├── run.bat                  # Launches the Streamlit UI
@@ -77,14 +79,14 @@ magic-eraser/
 
 ### Prerequisites
 
-- Python 3.9+
+- Python 3.11+
 - CUDA-compatible GPU (optional — inference runs on CPU too)
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/JIGGISTYLE/magic-eraser.git
-cd magic-eraser
+git clone https://github.com/raghavvxts/eraser-ai.git
+cd eraser-ai
 ```
 
 ### 2. Set Up a Virtual Environment & Install Dependencies
@@ -119,7 +121,7 @@ streamlit run streamlit_app.py
 ```
 
 Opens at **`http://localhost:8501`**. Upload an image (or pick a bundled sample), paint the area to
-remove, then click **Run inpainting**.
+remove, then click **Restore image**.
 
 ### FastAPI REST API
 
@@ -165,3 +167,9 @@ curl -X POST http://127.0.0.1:8000/api/inpaint \
 
 - GitHub: [github.com/JIGGISTYLE](https://github.com/JIGGISTYLE)
 - Repository: [github.com/JIGGISTYLE/magic-eraser](https://github.com/JIGGISTYLE/magic-eraser)
+
+## Development checks
+
+Install test dependencies with `pip install -r requirements-dev.txt`, then run `python -m unittest discover -v`. The UI and API share image preparation, inference, and padding removal in `editor_core.py`. Model weights remain local and are not included in Git.
+
+API output PNGs have unique names and remain in `app/files/` until removed. That directory is ignored by Git. Keep model weights and output images out of commits.

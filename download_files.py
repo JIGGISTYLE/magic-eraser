@@ -1,12 +1,9 @@
-# %%
 import pathlib
-# pyrefly: ignore [missing-import]
 import gdown
 
-# %%
 
 
-FILES_DICT = {  
+FILES_DICT = {
     # converted weights: Places2 (for networks_tf.py)
     "states_tf_places2.pth": {
         "path": "pretrained/states_tf_places2.pth",
@@ -34,18 +31,22 @@ FILES_DICT = {
 
 }
 
-# %%
 
-root_dir = pathlib.Path(__file__).parent
+def main():
+    root_dir = pathlib.Path(__file__).parent
 
-for file_dict in FILES_DICT.values():
-    file_path = root_dir.joinpath(file_dict['path'])
+    for file_dict in FILES_DICT.values():
+        file_path = root_dir.joinpath(file_dict['path'])
 
-    if not file_path.parent.exists():
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        
-    if file_path.exists():
-        print(file_dict['path'], "already exists!")
-    elif file_dict.get('download', True):
-        print("Downloading", file_dict['path'], "...")
-        output_filepath = gdown.download(file_dict['url'], output=file_path.as_posix())
+        if not file_path.parent.exists():
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if file_path.exists():
+            print(file_dict['path'], "already exists!")
+        elif file_dict.get('download', True):
+            print("Downloading", file_dict['path'], "...")
+            output_filepath = gdown.download(file_dict['url'], output=file_path.as_posix(), fuzzy=True)
+
+
+if __name__ == "__main__":
+    main()

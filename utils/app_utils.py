@@ -1,114 +1,77 @@
-import os
-import torch
-from PIL import Image
-from torchvision.transforms import ToTensor
+from pathlib import Path
+from uuid import uuid4
 
-from utils.misc import infer_deepfill
+import torch
+import yaml
+from PIL import Image, ImageOps
+
+from editor_core import run_inpaint
 from model import load_model
 
-import yaml
-try:
-    from yaml import CLoader as Loader
-except ImportError:
-    from yaml import Loader
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def _load_models(config_path, device='cuda'):
-    with open(config_path, 'r') as stream:
-        config = yaml.load(stream, Loader)
+    with open(config_path) as stream:
+        config = yaml.safe_load(stream)
 
-    config = {name:cfg for name, cfg in config.items() 
-                       if os.path.exists(cfg['path'])}
-
+    config = {name: cfg for name, cfg in config.items()
+              if (ROOT / cfg['path']).is_file()}
     loaded_models = {}
-
     for name, cfg in config.items():
-        is_loaded = False
         if cfg['load_at_startup']:
-            model = load_model(cfg['path'], device)
-            loaded_models[name] = model
-            is_loaded = True
-        config[name]['is_loaded'] = is_loaded
-
+            loaded_models[name] = load_model(ROOT / cfg['path'], device)
+        cfg['is_loaded'] = name in loaded_models
     return config, loaded_models
 
 
 class Inpainter:
     def __init__(self, device=None):
-        self.available_models = None
-        self.loaded_models = None
+        self.available_models = {}
+        self.loaded_models = {}
         self.host = ""
-        self.device = torch.device('cuda'
-                      if torch.cuda.is_available() else 'cpu') \
-                      if device is None else device
+        self.device = device if device is not None else torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu')
 
     def load_models(self, config_path):
-        available_models, loaded_models = _load_models(config_path, self.device)
-        self.available_models = available_models
-        self.loaded_models = loaded_models
+        self.available_models, self.loaded_models = _load_models(config_path, self.device)
 
     def get_model_info(self):
-        model_data = []
-        for name, cfg in self.available_models.items():
-            model_dict = cfg.copy()
-            model_dict['name'] = name
-            model_dict['type'] = 'df'
-            model_data.append(model_dict)
-
-        return model_data
+        return [dict(cfg, name=name, type='df')
+                for name, cfg in self.available_models.items()]
 
     def check_requested_models(self, models):
         for name in models:
-            if not name in self.loaded_models:
-                path = self.available_models[name]['path']
+            if name not in self.available_models:
+                raise ValueError(f"Unknown or unavailable model: {name}")
+            if name not in self.loaded_models:
+                path = ROOT / self.available_models[name]['path']
                 model = load_model(path, self.device)
                 if model is None:
-                    print(f"model @ {path} not found!")
-                    continue
+                    raise ValueError(f"Model weights are missing: {name}")
                 self.loaded_models[name] = model
                 self.available_models[name]['is_loaded'] = True
-                print(f'Loaded model: {name}')
 
     def inpaint(self, image, mask, models, max_size=512):
+        req_models = [name.strip() for name in models.split(',') if name.strip()]
+        if not req_models:
+            raise ValueError("Select at least one model")
+        with Image.open(image.file) as source:
+            image_pil = ImageOps.exif_transpose(source).convert('RGB')
+        with Image.open(mask.file) as source:
+            mask_pil = ImageOps.exif_transpose(source).convert('L')
 
-        req_models = models.split(',')
-        self.check_requested_models(req_models)
-
-        image_pil = Image.open(image.file).convert('RGB')
-        mask_pil = Image.open(mask.file)
-
-        mw, mh = mask_pil.size
-        scale = max_size / max(mw, mh)
-
-        mask_pil = mask_pil.resize(
-            (max_size, int(scale*mh)) if mw > mh else (int(scale*mw), max_size))
-        image_pil = image_pil.resize(mask_pil.size)
-
-        image, mask = ToTensor()(image_pil), ToTensor()(mask_pil)
-
+        results = run_inpaint(self, image_pil, mask_pil, req_models, max_size)
+        output_dir = ROOT / 'app/files'
+        output_dir.mkdir(parents=True, exist_ok=True)
+        # Separate requests must not overwrite another user's downloadable result.
+        request_id = uuid4().hex
         response_data = []
-        for idx_model, model_name in enumerate(req_models):
-            return_vals = self.available_models[model_name]['return_vals']
-            model_output_list = []
-            outputs = infer_deepfill(
-                self.loaded_models[model_name],
-                image.to(self.device), 
-                mask.to(self.device),
-                return_vals=return_vals
-            )
-            for idx_out, output in enumerate(outputs):
-                Image.fromarray(output) \
-                    .save(f'app/files/out_{idx_model}_{idx_out}.png')
-
-                model_output_list.append({
-                    'name': return_vals[idx_out],
-                    'file': f'{self.host}/files/out_{idx_model}_{idx_out}.png'
-                })
-
-            model_output_dict = {
-                'name': model_name,
-                'output': model_output_list
-            }
-            response_data.append(model_output_dict)
-
+        for idx_model, (name, outputs) in enumerate(results):
+            output_data = []
+            for idx_out, (output_name, output) in enumerate(outputs.items()):
+                filename = f'{request_id}_{idx_model}_{idx_out}.png'
+                output.save(output_dir / filename)
+                output_data.append({'name': output_name, 'file': f'{self.host}/files/{filename}'})
+            response_data.append({'name': name, 'output': output_data})
         return response_data

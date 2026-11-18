@@ -26,6 +26,10 @@ def mask_from_canvas(image_data, target_size):
 
 
 def prepare_inputs(image, mask, max_size):
+    if max_size <= 0:
+        raise ValueError("Inference size must be positive")
+    if image.size != mask.size:
+        raise ValueError("Image and mask dimensions must match")
     mw, mh = mask.size
     scale = max_size / max(mw, mh)
     size = (max_size, max(1, int(round(scale * mh)))) if mw > mh else (max(1, int(round(scale * mw))), max_size)
@@ -40,13 +44,14 @@ def prepare_inputs(image, mask, max_size):
 def run_inpaint(inpainter, image, mask, model_names, max_size):
     inpainter.check_requested_models(model_names)
     image_t, mask_t, output_size = prepare_inputs(image, mask, max_size)
+    image_t, mask_t = image_t.to(inpainter.device), mask_t.to(inpainter.device)
     results = []
     for name in model_names:
         return_vals = inpainter.available_models[name]["return_vals"]
         outputs = infer_deepfill(
             inpainter.loaded_models[name],
-            image_t.to(inpainter.device),
-            mask_t.to(inpainter.device),
+            image_t,
+            mask_t,
             return_vals=return_vals,
         )
         results.append((name, dict(zip(return_vals, [Image.fromarray(o).crop((0, 0, *output_size)) for o in outputs]))))

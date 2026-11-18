@@ -36,6 +36,13 @@ class EditorGeometryTests(unittest.TestCase):
                                  Image.new('L', (512, 365)), ['test'], 512)
         self.assertEqual(result[0][1]['inpainted'].size, (512, 365))
 
+    def test_invalid_input_dimensions_and_size(self):
+        image = Image.new('RGB', (32, 24))
+        with self.assertRaisesRegex(ValueError, 'dimensions'):
+            prepare_inputs(image, Image.new('L', (20, 20)), 256)
+        with self.assertRaisesRegex(ValueError, 'positive'):
+            prepare_inputs(image, Image.new('L', image.size), 0)
+
     def test_mask_uses_alpha_and_keeps_image_dimensions(self):
         rgba = np.zeros((10, 20, 4), dtype=np.uint8)
         rgba[2:5, 2:5, 3] = 255

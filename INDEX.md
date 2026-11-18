@@ -1,12 +1,13 @@
 # Codebase Index
 
-This directory (`magic-eraser`) contains a Python image inpainting application built on
+This directory (`eraser-ai`) contains a Python image inpainting application built on
 DeepFill v2 (gated convolution). It exposes a Streamlit UI and a FastAPI inference API over the
 same PyTorch model code.
 
 ## Directory Structure
 
 - `streamlit_app.py`: Streamlit web UI (upload, paint mask, run inpainting, download result).
+- `editor_core.py`: shared image preparation, padded inference, and PNG encoding.
 - `app.py`: FastAPI server exposing the same inference as a REST API.
 - `run.bat` / `run_api.bat`: one-click launchers for the Streamlit UI / FastAPI API.
 - `download_files.py`: downloads the pretrained weights from Google Drive.
@@ -25,4 +26,4 @@ same PyTorch model code.
 ## Usage Overview
 - Download weights with `download_files.py`.
 - Launch the UI with `run.bat` (Streamlit) or the API with `run_api.bat` (FastAPI).
-- All model/inference logic lives in `utils/` and `model/`; both entry points share it.
+- Model inference lives in `model/` and `utils/`; both entry points use `editor_core.py` for image preparation and result sizing.

@@ -1,5 +1,7 @@
 # This repo
 *.pth
+app/files/*
+!app/files/.gitkeep
 tmp
 checkpoints/
 tb_logs/

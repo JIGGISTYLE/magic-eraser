@@ -8,7 +8,6 @@ h1 { font-family: inherit !important; font-size: 1.65rem !important; font-weight
 h2, h3 { font-size: 1rem !important; font-weight: 600 !important; padding: .2rem 0 !important; }
 [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { color: #555e54 !important; font-size: .82rem; line-height: 1.5; }
 [data-testid="stWidgetLabel"] p { font-size: .86rem; }
-.st-key-sample-gallery [data-testid="stImage"] img { aspect-ratio: 4 / 3; object-fit: cover; }
 [data-testid="stFileUploaderDropzone"] { min-height: 90px; background: #fffefa; border: 1px dashed #a4ab9b; border-radius: 6px; }
 [data-testid="stBaseButton-secondary"], [data-testid="stBaseButton-primary"], [data-testid="stBaseButton-download"] { border-radius: 6px; min-height: 40px; box-shadow: none; transition: background-color 120ms ease, border-color 120ms ease; }
 [data-testid="stBaseButton-secondary"] { background: #fffefa; border-color: #cdd2c7; }
@@ -17,7 +16,6 @@ h2, h3 { font-size: 1rem !important; font-weight: 600 !important; padding: .2rem
 [data-testid="stExpander"] { border-color: #dcded6; border-radius: 6px; }
 hr { border-color: #dcded6 !important; margin: .6rem 0 !important; }
 .editor-brand { display: flex; align-items: center; gap: 8px; font-weight: 650; font-size: 16px; margin-bottom: 12px; }
-.editor-brand svg { color: #45624b; flex-shrink: 0; }
 .editor-note { color: #555e54; font-size: 12px; line-height: 1.6; padding-top: 10px; border-top: 1px solid #dcded6; }
 .st-key-editor-toolbar { padding: .55rem 0; border-top: 1px solid #dcded6; }
 .st-key-editor-toolbar [data-testid="stHorizontalBlock"] { align-items: center; }
@@ -48,15 +46,12 @@ hr { border-color: #dcded6 !important; margin: .6rem 0 !important; }
 .st-key-upload-panel h3 { font-size: 1.2rem !important; line-height: 1.35; }
 .st-key-upload-panel [data-testid="stFileUploaderDropzone"] { border-style: dashed; background: #f0f2eb; min-height: 118px; }
 .st-key-landing-guide { margin-top: .6rem; }
-.st-key-landing-guide [data-testid="stMarkdownContainer"] p { font-size: .82rem; color: #555e54; line-height: 1.5; }
 .st-key-landing-guide strong { color: #30392e; font-weight: 600; }
 .st-key-sample-gallery [data-testid="stImage"] img { height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; }
 .st-key-sample-gallery [data-testid="stHorizontalBlock"] { gap: .65rem; }
 .st-key-sample-gallery [data-testid="stBaseButton-secondary"] p { font-size: .78rem; }
 .st-key-sample-gallery [data-testid="stBaseButton-secondary"] { background: transparent; border-color: transparent; min-height: 30px; padding: 0; }
 .st-key-sample-gallery [data-testid="stBaseButton-secondary"]:hover { color: #344d39; background: #edf0e7; }
-[data-testid="stImage"] { max-width: 100%; min-width: 0; }
-[data-testid="stImage"] img { max-width: 100%; height: auto; }
 @media (max-width: 760px) {
   [data-testid="stMainBlockContainer"]:has(.st-key-landing) { padding: 1rem; }
   .st-key-landing-preview, .st-key-landing-guide, .st-key-landing [data-testid="stColumn"]:has(.st-key-landing-preview) { display: none; }
@@ -76,7 +71,9 @@ hr { border-color: #dcded6 !important; margin: .6rem 0 !important; }
 .main-brand { display: flex; align-items: center; gap: 10px; }
 .main-brand img, .editor-brand img { display: block; flex-shrink: 0; object-fit: contain; }
 .main-brand h1 { margin: 0; }
-@media (max-width: 760px) { .main-brand img { width: 30px; height: 30px; } }
+.main-brand img, .editor-brand img { max-width: 100%; height: auto; border-radius: 8px; }
+.main-brand img { width: 48px; height: 48px; }
+@media (max-width: 760px) { .main-brand img { width: 38px; height: 38px; } }
 
 /* Keep the upload action and its complete file hint on the same visual axis. */
 .st-key-upload-panel [data-testid="stFileUploaderDropzone"] {

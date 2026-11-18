@@ -1,4 +1,4 @@
-# Magic Eraser: UI and erase audit
+# EraseAI: UI and erase audit
 
 Tested locally on 18 November 2026 at http://localhost:8501.
 
@@ -43,3 +43,9 @@ Downloaded a PNG through the browser and verified it with Pillow: **512 × 365 p
 6. **Persistence:** Browser reloads can reset the edit session; no saved projects or automatic recovery.
 
 Touch hardware, a full keyboard/screen-reader audit, very large-file stress testing, and all model/resolution combinations were not tested.
+
+## Code cleanup follow-up
+
+The UI and API now share padded inference through `editor_core.py`. API files use unique names, input errors return actionable responses, and project paths work independently of the launch directory. Requirements now list 11 direct runtime dependencies, including `gdown`, rather than a full development environment. The downloader runs only when invoked as a script. Duplicate CSS and retired branding assets were removed.
+
+The official SVGs embed lossless crops instead of the entire original artwork: their combined size fell from 3,153,010 to 448,859 bytes (about 86%). A decoded-pixel comparison verified the crops match the original. The original source artwork remains intact.

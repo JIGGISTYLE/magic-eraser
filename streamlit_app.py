@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import streamlit as st
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, UnidentifiedImageError
 from streamlit_drawable_canvas import st_canvas
 
 from utils.app_utils import Inpainter
@@ -22,13 +22,14 @@ SAMPLES = {
 
 st.set_page_config(
     page_title="EraseAI",
-    page_icon=Image.open(ROOT / "assets/eraseai-favicon.png"),
+    page_icon=str(ROOT / "assets/eraseai-icon.svg"),
     layout="wide",
 )
 
 
 st.html(f"<style>{(ROOT / 'editor.css').read_text()}</style>")
-LOGO_SRC = "data:image/png;base64," + base64.b64encode((ROOT / "assets/eraseai-mark.png").read_bytes()).decode()
+LOGO_SRC = "data:image/svg+xml;base64," + base64.b64encode((ROOT / "assets/eraseai-logo.svg").read_bytes()).decode()
+ICON_SRC = "data:image/svg+xml;base64," + base64.b64encode((ROOT / "assets/eraseai-icon.svg").read_bytes()).decode()
 
 
 @st.cache_resource(show_spinner="Loading inpainting models…")
@@ -54,7 +55,7 @@ has_source = bool(st.session_state.get("photo") or st.session_state.get("sample"
 inpainter = get_inpainter() if has_source else None
 
 with st.sidebar:
-    st.html(f'<div class="editor-brand"><img src="{LOGO_SRC}" alt="" width="28" height="28">EraseAI</div>')
+    st.html(f'<div class="editor-brand"><img src="{LOGO_SRC}" alt="EraseAI" width="210" height="49"></div>')
     if has_source:
         st.subheader("Selection tools")
         tool = st.radio("Tool", ["Brush", "Rectangle"], horizontal=True)
@@ -79,7 +80,7 @@ with st.sidebar:
                 st.caption(f"{name} · {status}")
         st.html('<p class="editor-note">Images are processed by this local app.<br>Export your finished image as a PNG.</p>')
 
-st.html(f'<div class="main-brand"><img src="{LOGO_SRC}" alt="" width="38" height="38"><h1>EraseAI</h1></div>')
+st.html(f'<div class="main-brand"><h1><img src="{ICON_SRC}" alt="EraseAI" width="48" height="48"></h1></div>')
 st.caption("Paint over an object. Restore the space it leaves behind.")
 
 source_panel = (st.expander("Change photograph", expanded=False, key="source-edit")
@@ -125,7 +126,11 @@ if upload is not None and not has_source:
     st.rerun()
 
 if upload is not None:
-    image = ImageOps.exif_transpose(Image.open(upload)).convert("RGB")
+    try:
+        image = ImageOps.exif_transpose(Image.open(upload)).convert("RGB")
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+        st.error("This file could not be opened as a photograph. Try another PNG, JPG or WebP image.")
+        st.stop()
     image_id = hashlib.sha256(upload.getvalue()).hexdigest()
     image_stem = Path(upload.name).stem
 elif sample != "None":
