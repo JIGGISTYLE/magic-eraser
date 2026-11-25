@@ -89,20 +89,20 @@ with source_panel:
     if not has_source:
         preview, chooser = st.columns([1.65, 1], gap="large")
         with preview, st.container(key="landing-preview"):
-            st.subheader("See what a small edit can do")
+            st.subheader("A real edit, before and after")
             original, restored = st.tabs(["Original", "Erased"])
             with original:
                 st.image(Image.open(SAMPLES["Wind turbines (Places2)"]), width="stretch")
             with restored:
                 st.image(Image.open(ROOT / "examples/inpaint/case2_restored.png"), width="stretch")
-            st.caption("The distant turbine, removed with this app. Switch views to compare.")
+            st.caption("Places2 sample · The distant turbine is removed in the erased view.")
         upload_panel = chooser.container(border=True, key="upload-panel")
     else:
         upload_panel = st.container()
     with upload_panel:
         if not has_source:
-            st.subheader("Make room for what matters.")
-            st.caption("Open your photograph to remove an object or repair a detail.")
+            st.subheader("Keep the photo. Lose the distraction.")
+            st.caption("Open a photograph, mark an area, and restore it.")
         upload = st.file_uploader(
             "Your photograph", type=["png", "jpg", "jpeg", "bmp", "webp"],
             key="photo", label_visibility="collapsed",
