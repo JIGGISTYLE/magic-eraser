@@ -1,6 +1,7 @@
 import base64
 import copy
 import hashlib
+import json
 import time
 from pathlib import Path
 
@@ -33,14 +34,15 @@ ICON_SRC = "data:image/svg+xml;base64," + base64.b64encode((ROOT / "assets/erase
 
 
 @st.cache_resource(show_spinner="Loading inpainting models…")
-def get_inpainter():
+def get_inpainter(config_version):
     inpainter = Inpainter()
     inpainter.load_models(str(CONFIG_PATH))
     return inpainter
 
 
 MODEL_LABELS = {
-    "pt_places2": "Scenes · Places2",
+    "pt_places2": "DeepFill v2 · pretrained Places2",
+    "deepfill_lite": "DeepFillLite · trained from scratch",
     "tf_places2": "Scenes · Places2 (converted)",
     "pt_celebahq": "Portraits · CelebA-HQ",
     "tf_celebahq": "Portraits · CelebA-HQ (converted)",
@@ -52,7 +54,7 @@ def choose_sample(name):
 
 
 has_source = bool(st.session_state.get("photo") or st.session_state.get("sample", "None") != "None")
-inpainter = get_inpainter() if has_source else None
+inpainter = get_inpainter(CONFIG_PATH.stat().st_mtime_ns) if has_source else None
 
 with st.sidebar:
     st.html(f'<div class="editor-brand"><img src="{LOGO_SRC}" alt="EraseAI" width="210" height="49"></div>')
@@ -66,13 +68,31 @@ with st.sidebar:
         st.divider()
         st.subheader("Restoration")
         available = list(inpainter.available_models.keys())
-        model_names = st.multiselect(
-            "Model",
-            available,
-            default=["pt_places2"] if "pt_places2" in available else available[:1],
-            format_func=lambda name: MODEL_LABELS.get(name, name),
-            help="Scenes models suit landscapes and everyday photos. Portrait models suit faces. Select multiple models to compare results.",
+        options = (["pt_places2"] if "pt_places2" in available else [])
+        options += [name for name in available if name != "pt_places2"]
+        if "pt_places2" in available and "deepfill_lite" in available:
+            options.append("compare_both")
+        if not options:
+            st.error("No model weights found. Download the pretrained weights to start editing.")
+            st.stop()
+        selected_model = st.selectbox(
+            "Restoration model", options,
+            format_func=lambda name: "Compare both · same image and mask" if name == "compare_both" else MODEL_LABELS.get(name, name),
+            help="Pretrained DeepFill v2 is the default. DeepFillLite is a smaller research model trained from scratch on flowers.",
         )
+        model_names = ["pt_places2", "deepfill_lite"] if selected_model == "compare_both" else [selected_model]
+        lite_selected = "deepfill_lite" in model_names
+        if lite_selected:
+            st.caption("DeepFillLite: 780K parameters, trained for 10 epochs on flowers at 128 px. Expect softer fills and limited generalization.")
+        with st.expander("Measured model comparison"):
+            benchmark = json.loads((ROOT / "pretrained/comparison_summary.json").read_text())
+            measured = benchmark["models"]
+            st.table({
+                "Model": ["Pretrained DeepFill v2", "DeepFillLite (scratch)"],
+                "Masked MAE ↓": [round(measured[k]["masked_mae"], 4) for k in ("DeepFill_v2_Places2", "DeepFillLite")],
+                "Masked PSNR ↑": [round(measured[k]["masked_psnr"], 2) for k in ("DeepFill_v2_Places2", "DeepFillLite")],
+            })
+            st.caption("819 held-out flower images, identical synthetic masks, 128 × 128 px. Pretrained DeepFill v2 scored better in this test. Different training data and budgets: this does not prove that training from scratch cannot work well.")
         with st.expander("Model details"):
             st.caption(f"Processing device: {inpainter.device}")
             for name in available:
@@ -163,14 +183,15 @@ with photo_info:
     st.caption(f"{image_stem if sample == 'None' or upload else sample.split(' (')[0]} · {image.width} × {image.height} px")
 with inference_control:
     max_size = st.select_slider(
-        "Inference size", [256, 384, 512, 640, 768], value=512,
+        "Inference size", [128, 256, 384, 512, 640, 768], value=128 if lite_selected else 512,
+        disabled=lite_selected, key="inference-lite" if lite_selected else "inference-default",
         format_func=lambda size: {
-            256: "256 px · Fastest", 384: "384 px · Faster", 512: "512 px · Balanced",
+            128: "128 px · Benchmark size", 256: "256 px · Fastest", 384: "384 px · Faster", 512: "512 px · Balanced",
             640: "640 px · Slower", 768: "768 px · Most detail",
         }[size],
         help="Sets the longest image edge processed by the model. Smaller sizes are faster; larger sizes take longer and may retain more detail. A larger size does not guarantee a better repair.",
     )
-    st.caption("Smaller: faster preview. Larger: slower processing, more detail potential.")
+    st.caption("128 px patch inference for DeepFillLite/comparison. Original pixels outside the selection stay unchanged; the repaired patch may look soft." if lite_selected else "Smaller: faster preview. Larger: slower processing, more detail potential.")
 
 # Measure the editor, not the whole window, so the canvas also fits beside the sidebar.
 measure_editor = st.components.v2.component(
@@ -247,7 +268,7 @@ else:
 if canvas_pixels is not None:
     st.session_state.canvas_mask = {"base": canvas_base, "image": mask}
 drawn_pixels = int((np.asarray(mask) > 0).sum())
-request_key = (image_id, hashlib.sha256(mask.tobytes()).hexdigest(), tuple(model_names), max_size)
+request_key = ("original-resolution-v1", image_id, hashlib.sha256(mask.tobytes()).hexdigest(), tuple(model_names), max_size)
 st.caption(f"Selection: {drawn_pixels / (image.width * image.height):.1%} of the photograph · Brush and rectangle marks are rebuilt from the surrounding image.")
 
 with st.expander("Preview mask", expanded=False):
@@ -280,25 +301,28 @@ if not st.session_state.results:
 elif st.session_state.inpaint_key != request_key:
     st.info("The image, selection, or settings changed. Restore again to update the result.")
 else:
-    for name, outputs in st.session_state.results:
-        st.markdown(f"**{MODEL_LABELS.get(name, name)}**")
-        inpainted = outputs.get("inpainted")
-        if inpainted is not None:
-            before, after = st.columns(2, gap="medium")
-            before.image(image.resize(inpainted.size, Image.Resampling.LANCZOS),
-                         caption="Original", width="stretch")
-            after.image(inpainted, caption=f"Restored · {inpainted.width} × {inpainted.height} px",
-                        width="stretch")
-            st.caption(f"Restored in {st.session_state.get('elapsed', 0):.1f} s · {inpainter.device} · PNG export keeps these dimensions.")
-            st.download_button(
-                "Download PNG",
-                png_bytes(inpainted),
-                file_name=f"{image_stem}_{name}_inpainted.png",
-                mime="image/png",
-                key=f"download-{name}",
-            )
-        stage1 = outputs.get("stage1")
-        if stage1 is not None:
-            with st.expander("Show coarse (stage-1) result"):
-                st.image(stage1, width=min(stage1.width, canvas_w))
-        st.divider()
+    comparing = len(st.session_state.results) > 1
+    if comparing:
+        st.caption("Same source, selection and patch inference size. Original pixels outside the selection are preserved in both results.")
+        panels = st.columns(len(st.session_state.results), gap="medium")
+    for index, (name, outputs) in enumerate(st.session_state.results):
+        panel = panels[index] if comparing else st.container()
+        with panel:
+            st.markdown(f"**{MODEL_LABELS.get(name, name)}**")
+            inpainted = outputs.get("inpainted")
+            if inpainted is not None:
+                if comparing:
+                    st.image(inpainted, caption=f"{inpainted.width} × {inpainted.height} px", width="stretch")
+                else:
+                    before, after = st.columns(2, gap="medium")
+                    before.image(image.resize(inpainted.size, Image.Resampling.LANCZOS), caption="Original", width="stretch")
+                    after.image(inpainted, caption=f"Restored · {inpainted.width} × {inpainted.height} px", width="stretch")
+                st.download_button(
+                    "Download PNG", png_bytes(inpainted),
+                    file_name=f"{image_stem}_{name}_inpainted.png", mime="image/png", key=f"download-{name}",
+                )
+            stage1 = outputs.get("stage1")
+            if stage1 is not None:
+                with st.expander("Show coarse (stage-1) result"):
+                    st.image(stage1, width=min(stage1.width, canvas_w))
+    st.caption(f"Completed in {st.session_state.get('elapsed', 0):.2f} s total · {inpainter.device}. Original-resolution PNG; only the selected area is replaced.")

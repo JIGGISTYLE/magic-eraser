@@ -14,6 +14,7 @@ same PyTorch model code.
 - `app/models.yaml`: maps model names (`pt_places2`, `tf_places2`, `pt_celebahq`, `tf_celebahq`) to weight paths.
 - `app/files/`: output directory used by the FastAPI API (served at `/files`).
 - `model/`: the neural networks.
+  - `model/deepfill_lite.py`: trained lightweight two-stage model and inference adapter.
   - `model/__init__.py`: `load_model()`, picks the right Generator for the given weights.
   - `model/networks.py`: Generator for the PyTorch-native (`states_pt_*.pth`) weights.
   - `model/networks_tf.py`: Generator for the TensorFlow-converted (`states_tf_*.pth`) weights.

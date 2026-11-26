@@ -43,8 +43,14 @@ def prepare_inputs(image, mask, max_size):
 
 def run_inpaint(inpainter, image, mask, model_names, max_size):
     inpainter.check_requested_models(model_names)
+    for name in model_names:
+        required_size = inpainter.available_models[name].get("inference_size")
+        if required_size and max_size != required_size:
+            raise ValueError(f"{name} requires inference size {required_size} px; it was trained and evaluated at this size")
     image_t, mask_t, output_size = prepare_inputs(image, mask, max_size)
     image_t, mask_t = image_t.to(inpainter.device), mask_t.to(inpainter.device)
+    original = image.convert("RGB")
+    original_mask = mask.convert("L").point(lambda value: 255 if value > 0 else 0)
     results = []
     for name in model_names:
         return_vals = inpainter.available_models[name]["return_vals"]
@@ -54,7 +60,12 @@ def run_inpaint(inpainter, image, mask, model_names, max_size):
             mask_t,
             return_vals=return_vals,
         )
-        results.append((name, dict(zip(return_vals, [Image.fromarray(o).crop((0, 0, *output_size)) for o in outputs]))))
+        rendered = dict(zip(return_vals, [Image.fromarray(o).crop((0, 0, *output_size)) for o in outputs]))
+        if "inpainted" in rendered:
+            # Resizing the inference result must never blur untouched source pixels.
+            patch = rendered["inpainted"].resize(original.size, Image.Resampling.LANCZOS)
+            rendered["inpainted"] = Image.composite(patch, original, original_mask)
+        results.append((name, rendered))
     return results
 
 

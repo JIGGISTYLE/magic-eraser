@@ -173,3 +173,15 @@ curl -X POST http://127.0.0.1:8000/api/inpaint \
 Install test dependencies with `pip install -r requirements-dev.txt`, then run `python -m unittest discover -v`. The UI and API share image preparation, inference, and padding removal in `editor_core.py`. Model weights remain local and are not included in Git.
 
 API output PNGs have unique names and remain in `app/files/` until removed. That directory is ignored by Git. Keep model weights and output images out of commits.
+
+## Model selection and comparison
+
+After opening a photo, choose **Restoration model**: pretrained DeepFill v2 (default), DeepFillLite trained from scratch, or **Compare both**. Comparison shows both restored images side by side using the same mask at 128 px. Existing DeepFill v2 inference sizes remain available when it is selected alone.
+
+The bundled 3 MB `pretrained/deepfill_lite_weights.pt` is the actual exported best checkpoint from a 10-epoch, 780K-parameter flower-domain run. Its architecture lives in `model/deepfill_lite.py`; provenance and a weights hash are in `pretrained/deepfill_lite_info.json`. This lightweight model omits contextual attention and is not an exact DeepFill v2 reproduction. Full-resolution output is not implied by an enlarged preview.
+
+On 819 held-out flower images at 128 × 128, pretrained DeepFill v2 achieved masked MAE 0.0926 / PSNR 17.12 dB, versus 0.1049 / 16.73 dB for DeepFillLite. Different datasets and training budgets mean this does **not** establish that training from scratch cannot succeed. Details are in `pretrained/comparison_summary.json`; dataset terms remain applicable.
+
+The API supports `models=deepfill_lite` or `models=pt_places2,deepfill_lite` with `size=128`. Other sizes for DeepFillLite return a validation error rather than silently using untested settings.
+
+Restored PNGs preserve the uploaded image dimensions and every pixel outside the binary selection. Inference size controls only the repair calculation; the generated patch is resized and composited back into the original. This prevents global downsampling blur but does not create high-resolution detail inside a low-resolution repair. Coarse-stage previews remain at inference resolution.

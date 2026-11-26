@@ -36,6 +36,25 @@ class EditorGeometryTests(unittest.TestCase):
                                  Image.new('L', (512, 365)), ['test'], 512)
         self.assertEqual(result[0][1]['inpainted'].size, (512, 365))
 
+    def test_low_resolution_repair_preserves_unmasked_source_pixels(self):
+        rng = np.random.default_rng(42)
+        original = rng.integers(0, 256, (365, 512, 3), dtype=np.uint8)
+        mask = Image.new('L', (512, 365))
+        mask.paste(255, (100, 90, 180, 170))
+        inpainter = SimpleNamespace(
+            check_requested_models=lambda names: None, device='cpu',
+            available_models={'test': {'return_vals': ['inpainted', 'stage1']}},
+            loaded_models={'test': object()})
+        low_res = np.full((96, 128, 3), 200, dtype=np.uint8)
+        with patch('editor_core.infer_deepfill', return_value=[low_res, low_res]):
+            _, outputs = run_inpaint(inpainter, Image.fromarray(original), mask, ['test'], 128)[0]
+        result = np.asarray(outputs['inpainted'])
+        outside = np.asarray(mask) == 0
+        np.testing.assert_array_equal(result[outside], original[outside])
+        self.assertEqual(outputs['inpainted'].size, (512, 365))
+        self.assertEqual(outputs['stage1'].size, (128, 91))
+        self.assertTrue(np.all(result[100, 110] == 200))
+
     def test_invalid_input_dimensions_and_size(self):
         image = Image.new('RGB', (32, 24))
         with self.assertRaisesRegex(ValueError, 'dimensions'):

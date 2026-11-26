@@ -1,0 +1,18 @@
+{
+  "name": "DeepFillLite",
+  "architecture": "Two-stage gated convolution; no contextual attention",
+  "parameters": 779558,
+  "base_channels": 16,
+  "epochs": 10,
+  "image_size": 128,
+  "dataset": "huggan/flowers-102-categories",
+  "revision": "e8e6f53dc08d354a409c003af6e6df5fba2b293c",
+  "split": {
+    "train": 5729,
+    "validation": 1637,
+    "test": 819
+  },
+  "weights_sha256": "e551e5e09be7ff5b05e0aa4d77675f883ba82f1e320db7f009c3b20b87c131d3",
+  "purpose": "Research comparison. Short flower-only training run; not a general-purpose object removal model.",
+  "dataset_terms": "https://www.robots.ox.ac.uk/~vgg/data/flowers/102/"
+}

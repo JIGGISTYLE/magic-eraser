@@ -1,0 +1,41 @@
+{
+  "protocol": {
+    "image_size": 128,
+    "device": "mps",
+    "split_manifest": "39fc5bb9fc9d8b93b751d0aee13d1ede60684b23f18d48668b7ea70dfcd82ab4",
+    "dataset_revision": "e8e6f53dc08d354a409c003af6e6df5fba2b293c",
+    "metric_range": "[0,1]",
+    "ssim": "11x11 valid uniform window; masked average over hole centers",
+    "timing": "batch size 1 forward with synchronization, 3 warmup forwards, excludes IO and transfers"
+  },
+  "models": {
+    "DeepFillLite": {
+      "masked_mae": 0.10487567837621849,
+      "masked_psnr": 16.72590771816007,
+      "masked_ssim": 0.4869029604908311,
+      "full_ssim": 0.7980094786383148,
+      "seconds": 0.003601779650576397,
+      "unmasked_max_error": 0.0,
+      "median_seconds": 0.003505999979097396,
+      "parameters": 779558,
+      "test_images": 819
+    },
+    "DeepFill_v2_Places2": {
+      "masked_mae": 0.09261039336995473,
+      "masked_psnr": 17.12037468364096,
+      "masked_ssim": 0.5447033274013626,
+      "full_ssim": 0.8261724264339358,
+      "seconds": 0.009835326463829553,
+      "unmasked_max_error": 0.0,
+      "median_seconds": 0.009727666998514906,
+      "parameters": 4052478,
+      "test_images": 819
+    }
+  },
+  "caveats": [
+    "Different training domains and compute budgets; not a controlled architecture ablation.",
+    "Flowers synthetic masks measure reconstruction, not real object-removal realism.",
+    "No test tuning; best lightweight checkpoint chosen by validation masked MAE.",
+    "Known pixels are copied exactly in both models. No classification accuracy exists for this task."
+  ]
+}

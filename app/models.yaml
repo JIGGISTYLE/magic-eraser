@@ -17,3 +17,9 @@ pt_celebahq:
   path: pretrained/states_pt_celebahq.pth
   load_at_startup: False
   return_vals: [inpainted, stage1]
+
+deepfill_lite:
+  path: pretrained/deepfill_lite_weights.pt
+  load_at_startup: False
+  inference_size: 128
+  return_vals: [inpainted, stage1]
